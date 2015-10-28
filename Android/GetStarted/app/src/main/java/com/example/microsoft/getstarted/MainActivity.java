@@ -36,6 +36,10 @@ public class MainActivity extends ActionBarActivity {
 //    private String HubName = "<Enter Your Hub Name>";
 //    private String HubListenConnectionString = "<Your default listen connection string>";
 
+    private String SENDER_ID = "758362521484";
+    private String HubName = "wesmc-hub";
+    private String HubListenConnectionString = "Endpoint"=sb://wesmc-hub-ns.servicebus.windows.net/;SharedAccessKeyName=DefaultListenSharedAccessSignature;SharedAccessKey=vIlbhiaBeH5MYg680giYwevM+XdTbMUaEwzv4B/KZsk=";
+
     private String HubEndpoint = null;
     private String HubSasKeyName = null;
     private String HubSasKeyValue = null;

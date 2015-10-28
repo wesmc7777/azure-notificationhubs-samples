@@ -20,10 +20,29 @@ using Windows.Networking.PushNotifications;
 using Microsoft.WindowsAzure.Messaging;
 using Windows.UI.Popups;
 
+
+using Windows.Storage;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using Newtonsoft.Json;
+using System.Threading.Tasks;
+using System.Linq;
+
 // The Blank Application template is documented at http://go.microsoft.com/fwlink/?LinkId=234227
 
 namespace GetStartedWindowsUniversal
 {
+
+
+    struct DeviceInstallation
+    {
+        public string InstallationId { get; set; }
+        public string Platform { get; set; }
+        public string Handle { get; set; }
+        public string[] Tags { get; set; }
+    }
+
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
     /// </summary>
@@ -48,17 +67,63 @@ namespace GetStartedWindowsUniversal
             var channel = await PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync();
 
             var hub = new NotificationHub("<hub name>", "<connection string with listen access>");
-            var result = await hub.RegisterNativeAsync(channel.Uri);
+            
+            // Registration Id 
+//            var result = await hub.RegisterNativeAsync(channel.Uri);
 
             // Displays the registration ID so you know it was successful
-            if (result.RegistrationId != null)
+//            if (result.RegistrationId != null)
+//            {
+//                var dialog = new MessageDialog("Registration successful: " + result.RegistrationId);
+//                dialog.Commands.Add(new UICommand("OK"));
+//                await dialog.ShowAsync();
+//            }
+
+            // Use Installation 
+            string installationId = null;
+            var settings = ApplicationData.Current.LocalSettings.Values;
+
+            // If we have not stored a installation id in application data, create and store as application data.
+            if (!settings.ContainsKey("__NHInstallationId"))
             {
-                var dialog = new MessageDialog("Registration successful: " + result.RegistrationId);
-                dialog.Commands.Add(new UICommand("OK"));
-                await dialog.ShowAsync();
+                installationId = Guid.NewGuid().ToString();
+                settings.Add("__NHInstallationId", installationId);
             }
 
+            installationId = (string)settings["__NHInstallationId"];
+
+            var deviceInstallation = new DeviceInstallation
+            {
+                InstallationId = installationId,
+                Platform = "wns",
+                Handle = channel.Uri,
+                //Tags = tags.ToArray<string>()
+            };
+
+            var statusCode = await CreateOrUpdateInstallationAsync(deviceInstallation);
+
+            if (statusCode != HttpStatusCode.Accepted)
+            {
+                // log or throw
+            }
         }
+
+
+        private async Task<HttpStatusCode> CreateOrUpdateInstallationAsync(DeviceInstallation deviceInstallation, string hubName, string listenConnectionString)
+        {
+            string uri = BACKENDENDPOINT + "/api/installationx";
+
+            using (var httpClient = new HttpClient())
+            {
+                var settings = ApplicationData.Current.LocalSettings.Values;
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
+
+                string json = JsonConvert.SerializeObject(deviceInstallation);
+                var response = await httpClient.PutAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+                return response.StatusCode;
+            }
+        }
+
 
         /// <summary>
         /// Invoked when the application is launched normally by the end user.  Other entry points

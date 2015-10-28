@@ -16,6 +16,7 @@ namespace NotifyUsers
     class RegisterClient
     {
         private string POST_URL;
+        private string BACKENDENDPOINT;
 
         private class DeviceRegistration
         {
@@ -23,11 +24,70 @@ namespace NotifyUsers
             public string Handle { get; set; }
             public string[] Tags { get; set; }
         }
+        
+        private class DeviceInstallation
+        {
+            public string InstallationId { get; set; }
+            public string Platform { get; set; }
+            public string Handle { get; set; }
+            public string[] Tags { get; set; }
+        }
+
+
 
         public RegisterClient(string backendEndpoint)
         {
-            POST_URL = backendEndpoint + "/api/register";
+            BACKENDENDPOINT = backendEndpoint;
+            POST_URL = BACKENDENDPOINT + "/api/register";
         }
+        
+
+        public async Task RegisterInstallationAsync(string handle, IEnumerable<string> tags)
+        {
+            string installationId = null;
+            var settings = ApplicationData.Current.LocalSettings.Values;
+
+            // If we have not stored a installation id in application data, create and store as application data.
+            if (!settings.ContainsKey("__NHInstallationId"))
+            {
+                installationId = Guid.NewGuid().ToString();
+                settings.Add("__NHInstallationId", installationId);
+            }
+
+            installationId = (string)settings["__NHInstallationId"];
+
+            var deviceInstallation = new DeviceInstallation
+            {
+                InstallationId = installationId,
+                Platform = "wns",
+                Handle = handle,
+                Tags = tags.ToArray<string>()
+            };
+
+            var statusCode = await CreateOrUpdateInstallationAsync(deviceInstallation);
+
+            if (statusCode != HttpStatusCode.Accepted)
+            {
+                // log or throw
+            }
+        }
+
+
+        private async Task<HttpStatusCode> CreateOrUpdateInstallationAsync(DeviceInstallation deviceInstallation)
+        {
+            string uri = BACKENDENDPOINT + "/api/installation";
+
+            using (var httpClient = new HttpClient())
+            {
+                var settings = ApplicationData.Current.LocalSettings.Values;
+                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
+
+                string json = JsonConvert.SerializeObject(deviceInstallation);
+                var response = await httpClient.PutAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+                return response.StatusCode;
+            }
+        }
+
 
         public async Task RegisterAsync(string handle, IEnumerable<string> tags)
         {
@@ -56,6 +116,7 @@ namespace NotifyUsers
                 // log or throw
             }
         }
+
 
         private async Task<HttpStatusCode> UpdateRegistrationAsync(string regId, DeviceRegistration deviceRegistration)
         {

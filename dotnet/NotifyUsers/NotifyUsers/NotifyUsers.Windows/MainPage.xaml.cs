@@ -32,7 +32,7 @@ namespace NotifyUsers
     {
 
 //        private static string BACKEND_ENDPOINT = "<Enter Your Backend Endpoint>";
-        private static string BACKEND_ENDPOINT = "http://appbackend6159.azurewebsites.net";
+        private static string BACKEND_ENDPOINT = "htt"p://appbackend6159.azurewebsites.net";
 
         public MainPage()
         {
@@ -92,7 +92,7 @@ namespace NotifyUsers
             {
                 // The "username:<user name>" tag gets automatically added by the message handler in the backend.
                 // The tag passed here can be whatever other tags you may want to use.
-                await new RegisterClient(BACKEND_ENDPOINT).RegisterAsync(channel.Uri, new string[] { "myTag" });
+                await new RegisterClient(BACKEND_ENDPOINT).RegisterInstallationAsync(channel.Uri, new string[] { "myTag" });
 
                 var dialog = new MessageDialog("Registered as: " + UsernameTextBox.Text);
                 dialog.Commands.Add(new UICommand("OK"));
