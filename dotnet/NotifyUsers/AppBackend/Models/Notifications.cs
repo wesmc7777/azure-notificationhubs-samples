@@ -18,7 +18,7 @@ namespace AppBackend.Models
         {
 //            Hub = NotificationHubClient.CreateClientFromConnectionString("<Enter your connection string with full access", "your hub name");
             
-            Hub = NotificationHubClient.CreateClientFromConnectionString("Endpoint= "sb://wesmc-hub-ns.servicebus.windows.net/;SharedAccessKeyName=DefaultFullSharedAccessSignature;SharedAccessKey=Ztd5lKYAovSs+g3gs0M/EkbVRuIVw7ft4BUylZRtcss=", "wesmc-hub");
+            Hub = NotificationHubClient.CreateClientFromConnectionString("Endpoint"=sb://wesmc-hub-ns.servicebus.windows.net/;SharedAccessKeyName=DefaultFullSharedAccessSignature;SharedAccessKey=Ztd5lKYAovSs+g3gs0M/EkbVRuIVw7ft4BUylZRtcss=", "wesmc-hub");
         }
     }
 }

@@ -33,9 +33,9 @@ namespace AppBackend.Controllers
                     outcome = await Notifications.Instance.Hub.SendWindowsNativeNotificationAsync(toast, userTag);
 
                     // Windows 10 specific Action Center support
-                    toast = @"<toast><visual><binding template=""ToastGeneric""><text id=""1"">" +
-                                "From " + user + ": " + message + "</text></binding></visual></toast>";
-                    outcome = await Notifications.Instance.Hub.SendWindowsNativeNotificationAsync(toast, userTag);
+                    //toast = @"<toast><visual><binding template=""ToastGeneric""><text id=""1"">" +
+                    //            "From " + user + ": " + message + "</text></binding></visual></toast>";
+                    //outcome = await Notifications.Instance.Hub.SendWindowsNativeNotificationAsync(toast, userTag);
 
                     // Additionally sending Windows Phone Notification MPNS
                     //toast = "<?xml version=\"1.0\" encoding=\"utf-8\"?>" +

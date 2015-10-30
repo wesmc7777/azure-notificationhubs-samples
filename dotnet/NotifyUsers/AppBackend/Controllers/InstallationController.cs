@@ -61,11 +61,11 @@ namespace AppBackend.Controllers
                     throw new HttpResponseException(HttpStatusCode.BadRequest);
             }
 
-            var username = HttpContext.Current.User.Identity.Name;
+            //var username = HttpContext.Current.User.Identity.Name;
 
-            // add check if user is allowed to add these tags
-            installation.Tags = new List<string>(deviceUpdate.Tags);
-            installation.Tags.Add("username:" + username);
+            // In the backend we can control if a user is allowed to add tags
+            //installation.Tags = new List<string>(deviceUpdate.Tags);
+            //installation.Tags.Add("username:" + username);
 
             await hub.CreateOrUpdateInstallationAsync(installation);
 

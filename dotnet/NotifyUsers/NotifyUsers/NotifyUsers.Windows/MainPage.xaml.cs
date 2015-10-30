@@ -32,11 +32,15 @@ namespace NotifyUsers
     {
 
 //        private static string BACKEND_ENDPOINT = "<Enter Your Backend Endpoint>";
-        private static string BACKEND_ENDPOINT = "htt"p://appbackend6159.azurewebsites.net";
+        private static string BACKEND_ENDPOINT = "http://appbackend6159.azurewebsites.net";
+
+        Windows.UI.Core.CoreDispatcher dispatcher;
 
         public MainPage()
         {
             this.InitializeComponent();
+
+            dispatcher = Windows.UI.Core.CoreWindow.GetForCurrentThread().Dispatcher;
         }
 
 
@@ -92,7 +96,7 @@ namespace NotifyUsers
             {
                 // The "username:<user name>" tag gets automatically added by the message handler in the backend.
                 // The tag passed here can be whatever other tags you may want to use.
-                await new RegisterClient(BACKEND_ENDPOINT).RegisterInstallationAsync(channel.Uri, new string[] { "myTag" });
+                await new RegisterClient(BACKEND_ENDPOINT).RegisterInstallationAsync(channel.Uri, new string[] { "username:" + UsernameTextBox.Text });
 
                 var dialog = new MessageDialog("Registered as: " + UsernameTextBox.Text);
                 dialog.Commands.Add(new UICommand("OK"));
@@ -110,10 +114,11 @@ namespace NotifyUsers
 
         async void channel_PushNotificationReceived(PushNotificationChannel sender, PushNotificationReceivedEventArgs args)
         {
-            await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,async () =>
+
+            await dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
             {
                 var alert = new MessageDialog(args.ToastNotification.Content.InnerText, "New Notification Received In App");
-                await alert.ShowAsync();
+                alert.ShowAsync(); /// DID SHOW ASYNC CHANGE?????????????????
             });
         }
 
