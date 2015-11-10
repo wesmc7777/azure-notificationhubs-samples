@@ -9,6 +9,7 @@ using AppBackend.Models;
 using System.Threading.Tasks;
 using System.Web;
 
+using Microsoft.Azure.NotificationHubs;
 
 namespace AppBackend.Controllers
 {

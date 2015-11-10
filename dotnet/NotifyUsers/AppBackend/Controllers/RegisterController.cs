@@ -30,7 +30,6 @@ namespace AppBackend.Controllers
         }
 
 
-
         // POST api/register
         // This creates a registration id
         public async Task<string> Post(string handle = null)

@@ -29,6 +29,11 @@ using Newtonsoft.Json;
 using System.Threading.Tasks;
 using System.Linq;
 
+using Windows.Security.Cryptography.Core;
+using Windows.Security.Cryptography;
+using Windows.Storage.Streams;
+
+
 // The Blank Application template is documented at http://go.microsoft.com/fwlink/?LinkId=234227
 
 namespace GetStartedWindowsUniversal
@@ -37,11 +42,60 @@ namespace GetStartedWindowsUniversal
 
     struct DeviceInstallation
     {
-        public string InstallationId { get; set; }
-        public string Platform { get; set; }
-        public string Handle { get; set; }
-        public string[] Tags { get; set; }
+        public string installationId { get; set; }
+        public string platform { get; set; }
+        public string pushChannel { get; set; }
+        public string[] tags { get; set; }
     }
+
+
+    class ConnectionStringUtility
+    {
+        public string Endpoint { get; private set; }
+        public string SasKeyName { get; private set; }
+        public string SasKeyValue { get; private set; }
+
+        public ConnectionStringUtility(string connectionString)
+        {
+            //Parse Connectionstring
+            char[] separator = { ';' };
+            string[] parts = connectionString.Split(separator);
+            for (int i = 0; i < parts.Length; i++)
+            {
+                if (parts[i].StartsWith("Endpoint"))
+                    Endpoint = "https" + parts[i].Substring(11);
+                if (parts[i].StartsWith("SharedAccessKeyName"))
+                    SasKeyName = parts[i].Substring(20);
+                if (parts[i].StartsWith("SharedAccessKey"))
+                    SasKeyValue = parts[i].Substring(16);
+            }
+        }
+
+        public string getSaSToken(string uri, int minUntilExpire)
+        {
+            string targetUri = Uri.EscapeDataString(uri.ToLower()).ToLower();
+
+            // Add an expiration in seconds to it.
+            long expiresOnDate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+            expiresOnDate += minUntilExpire * 60 * 1000;
+            long expires_seconds = expiresOnDate / 1000;
+            String toSign = targetUri + "\n" + expires_seconds;
+
+            // Generate a HMAC-SHA256 hash or the uri and expiration using your secret key.
+            MacAlgorithmProvider macAlgorithmProvider = MacAlgorithmProvider.OpenAlgorithm(MacAlgorithmNames.HmacSha256);
+            BinaryStringEncoding encoding = BinaryStringEncoding.Utf8;
+            var messageBuffer = CryptographicBuffer.ConvertStringToBinary(toSign, encoding);
+            IBuffer keyBuffer = CryptographicBuffer.ConvertStringToBinary(SasKeyValue, encoding);
+            CryptographicKey hmacKey = macAlgorithmProvider.CreateKey(keyBuffer);
+            IBuffer signedMessage = CryptographicEngine.Sign(hmacKey, messageBuffer);
+ 
+            string signature = Uri.EscapeDataString(CryptographicBuffer.EncodeToBase64String(signedMessage));
+
+            return "SharedAccessSignature sr=" + targetUri + "&sig=" + signature + "&se=" + expires_seconds + "&skn=" + SasKeyName;
+        }
+
+    }
+
 
     /// <summary>
     /// Provides application-specific behavior to supplement the default Application class.
@@ -65,19 +119,18 @@ namespace GetStartedWindowsUniversal
         private async void InitNotificationsAsync()
         {
             var channel = await PushNotificationChannelManager.CreatePushNotificationChannelForApplicationAsync();
-
-            var hub = new NotificationHub("<hub name>", "<connection string with listen access>");
             
             // Registration Id 
-//            var result = await hub.RegisterNativeAsync(channel.Uri);
+            //var hub = new NotificationHub("<hub name>", "<connection string with listen access>");
+            //var result = await hub.RegisterNativeAsync(channel.Uri);
 
             // Displays the registration ID so you know it was successful
-//            if (result.RegistrationId != null)
-//            {
-//                var dialog = new MessageDialog("Registration successful: " + result.RegistrationId);
-//                dialog.Commands.Add(new UICommand("OK"));
-//                await dialog.ShowAsync();
-//            }
+            //if (result.RegistrationId != null)
+            //{
+            //    var dialog = new MessageDialog("Registration successful: " + result.RegistrationId);
+            //    dialog.Commands.Add(new UICommand("OK"));
+            //    await dialog.ShowAsync();
+            //}
 
             // Use Installation 
             string installationId = null;
@@ -94,32 +147,52 @@ namespace GetStartedWindowsUniversal
 
             var deviceInstallation = new DeviceInstallation
             {
-                InstallationId = installationId,
-                Platform = "wns",
-                Handle = channel.Uri,
-                //Tags = tags.ToArray<string>()
+                installationId = installationId,
+                platform = "wns",
+                pushChannel = channel.Uri,
+                //tags = tags.ToArray<string>()
             };
 
-            var statusCode = await CreateOrUpdateInstallationAsync(deviceInstallation);
+            var statusCode = await CreateOrUpdateInstallationAsync(deviceInstallation, "wesmc-hub", "Endpoint=sb://wesmc-hub-ns.servicebus.windows.net/;SharedAccessKeyName=DefaultListenSharedAccessSignature;SharedAccessKey=vIlbhiaBeH5MYg680giYwevM+XdTbMUaEwzv4B/KZsk=");
 
             if (statusCode != HttpStatusCode.Accepted)
             {
-                // log or throw
+                var dialog = new MessageDialog(statusCode.ToString(), "Registration failed. Installation Id : " + installationId);
+                dialog.Commands.Add(new UICommand("OK"));
+                await dialog.ShowAsync();
+            }
+            else
+            {
+                var dialog = new MessageDialog("Registration successful using installation Id : " + installationId);
+                dialog.Commands.Add(new UICommand("OK"));
+                await dialog.ShowAsync();
             }
         }
 
 
         private async Task<HttpStatusCode> CreateOrUpdateInstallationAsync(DeviceInstallation deviceInstallation, string hubName, string listenConnectionString)
         {
-            string uri = BACKENDENDPOINT + "/api/installationx";
+            if (deviceInstallation.installationId == null)
+                return HttpStatusCode.BadRequest;
+
+            // Parse connection string
+            ConnectionStringUtility connectionSaSUtil = new ConnectionStringUtility(listenConnectionString);
+            string hubResource = "installations/" + deviceInstallation.installationId + "?";
+            string apiVersion = "api-version=2015-04";
+
+            // Determine the targetUri that we will sign
+            string uri = connectionSaSUtil.Endpoint + hubName + "/" + hubResource + apiVersion;
+
+            //=== Generate SaS Security Token for Authorization header ===
+            string SasToken = connectionSaSUtil.getSaSToken(uri, 60);
 
             using (var httpClient = new HttpClient())
             {
-                var settings = ApplicationData.Current.LocalSettings.Values;
-                httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
-
                 string json = JsonConvert.SerializeObject(deviceInstallation);
-                var response = await httpClient.PutAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+
+                httpClient.DefaultRequestHeaders.Add("Authorization", SasToken);
+
+                var response = await httpClient.PutAsync(uri, new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
                 return response.StatusCode;
             }
         }

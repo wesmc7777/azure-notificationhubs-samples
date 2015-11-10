@@ -31,7 +31,7 @@ namespace NotifyUsers
     {
 
 //        private static string BACKEND_ENDPOINT = "<ENTER YOUR BACKEND ENDPOINT>";
-        private static string BACKEND_ENDPOINT = "http://appbackend6159.azurewebsites.net";
+        private static string BACKEND_ENDPOINT = "http://appbackend6159.azurewebsites.net/x/";
 
 
         public MainPage()

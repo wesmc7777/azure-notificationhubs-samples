@@ -15,8 +15,8 @@ namespace NotifyUsers
 {
     class RegisterClient
     {
-        private string POST_URL;
-        private string BACKENDENDPOINT;
+        private string REGISTRATIONID_CUSTOM_API_ENDPOINT;
+        private string INSTALLATIONID_CUSTOM_API_ENDPOINT;
 
         private class DeviceRegistration
         {
@@ -24,21 +24,20 @@ namespace NotifyUsers
             public string Handle { get; set; }
             public string[] Tags { get; set; }
         }
-        
-        private class DeviceInstallation
-        {
-            public string InstallationId { get; set; }
-            public string Platform { get; set; }
-            public string Handle { get; set; }
-            public string[] Tags { get; set; }
-        }
 
+        struct DeviceInstallation
+        {
+            public string installationId { get; set; }
+            public string platform { get; set; }
+            public string pushChannel { get; set; }
+            public string[] tags { get; set; }
+        }
 
 
         public RegisterClient(string backendEndpoint)
         {
-            BACKENDENDPOINT = backendEndpoint;
-            POST_URL = BACKENDENDPOINT + "/api/register";
+            INSTALLATIONID_CUSTOM_API_ENDPOINT = backendEndpoint + "/api/installation";
+            REGISTRATIONID_CUSTOM_API_ENDPOINT = backendEndpoint + "/api/register";
         }
         
 
@@ -58,10 +57,10 @@ namespace NotifyUsers
 
             var deviceInstallation = new DeviceInstallation
             {
-                InstallationId = installationId,
-                Platform = "wns",
-                Handle = handle,
-                Tags = tags.ToArray<string>()
+                installationId = installationId,
+                platform = "wns",
+                pushChannel = handle,
+                tags = tags.ToArray<string>()
             };
 
             var statusCode = await CreateOrUpdateInstallationAsync(deviceInstallation);
@@ -69,21 +68,20 @@ namespace NotifyUsers
             if (statusCode != HttpStatusCode.Accepted)
             {
                 // log or throw
+                throw new System.Net.WebException(statusCode.ToString());
             }
         }
 
 
         private async Task<HttpStatusCode> CreateOrUpdateInstallationAsync(DeviceInstallation deviceInstallation)
         {
-            string uri = BACKENDENDPOINT + "/api/installation";
-
             using (var httpClient = new HttpClient())
             {
                 var settings = ApplicationData.Current.LocalSettings.Values;
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
 
                 string json = JsonConvert.SerializeObject(deviceInstallation);
-                var response = await httpClient.PutAsync(uri, new StringContent(json, Encoding.UTF8, "application/json"));
+                var response = await httpClient.PutAsync(INSTALLATIONID_CUSTOM_API_ENDPOINT, new StringContent(json, Encoding.UTF8, "application/json"));
                 return response.StatusCode;
             }
         }
@@ -114,6 +112,7 @@ namespace NotifyUsers
             if (statusCode != HttpStatusCode.Accepted)
             {
                 // log or throw
+                throw new System.Net.WebException(statusCode.ToString());
             }
         }
 
@@ -125,7 +124,7 @@ namespace NotifyUsers
                 var settings = ApplicationData.Current.LocalSettings.Values;
                 httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
 
-                var putUri = POST_URL + "/" + regId;
+                var putUri = REGISTRATIONID_CUSTOM_API_ENDPOINT + "/" + regId;
 
                 string json = JsonConvert.SerializeObject(deviceRegistration);
                 var response = await httpClient.PutAsync(putUri, new StringContent(json, Encoding.UTF8, "application/json"));
@@ -145,7 +144,7 @@ namespace NotifyUsers
                 {
                     httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", (string)settings["AuthenticationToken"]);
 
-                    var response = await httpClient.PostAsync(POST_URL, new StringContent(""));
+                    var response = await httpClient.PostAsync(REGISTRATIONID_CUSTOM_API_ENDPOINT, new StringContent(""));
                     if (response.IsSuccessStatusCode)
                     {
                         string regId = await response.Content.ReadAsStringAsync();
@@ -154,12 +153,12 @@ namespace NotifyUsers
                     }
                     else
                     {
-                        throw new Exception();
+                        throw new System.Net.WebException(response.StatusCode.ToString());
                     }
                 }
             }
-            return (string)settings["__NHRegistrationId"];
 
+            return (string)settings["__NHRegistrationId"];
         }
     }
 }
